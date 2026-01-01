@@ -190,10 +190,7 @@ restart:
 # Generate website documentation (config reference, actions, commands)
 docs:
     zig build -Demit-webdata=true
-    cp zig-out/share/ghostty/webdata/config.mdx ~/projects/ghostmux/ghostty_config.mdx
-    cp zig-out/share/ghostty/webdata/actions.mdx ~/projects/ghostmux/ghostty_actions.mdx
-    cp zig-out/share/ghostty/webdata/commands.mdx ~/projects/ghostmux/ghostty_commands.mdx
-    @echo "Generated and copied docs to ~/projects/ghostmux/"
+    @echo "Generated docs to zig-out/share/ghostty/webdata/"
 
 # Clean build artifacts
 clean:

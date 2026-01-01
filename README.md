@@ -26,6 +26,19 @@ Scriptable Ghostty is a fork of [Ghostty](https://github.com/ghostty-org/ghostty
 | **v1** | Command Palette Actions | Scriptable actions exposed through the command palette |
 | **v2** | App Intents | Native Apple Shortcuts integration for system-wide automation |
 
+## Building
+
+This fork uses a [Justfile](Justfile) to wrap the build process, keeping fork-specific customizations separate from upstream code for easier updates.
+
+```bash
+just build    # Build the app
+just install  # Build and install to ~/Applications
+just run      # Build and run without installing
+just info     # Show build configuration
+```
+
+Requires [just](https://github.com/casey/just), Xcode, and Zig. See upstream [HACKING.md](HACKING.md) for full build prerequisites.
+
 ## Upstream
 
 This fork tracks upstream Ghostty. For documentation on terminal features, configuration, and general usage, see the [Ghostty documentation](https://ghostty.org/docs).
