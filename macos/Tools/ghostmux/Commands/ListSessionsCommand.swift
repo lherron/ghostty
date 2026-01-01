@@ -32,11 +32,10 @@ struct ListSessionsCommand: GhostmuxCommand {
                 titlePart += " (\(cwd))"
             }
 
-            var parts: [String] = [titlePart]
+            var parts: [String] = [shortId, titlePart]
             if let size {
                 parts.append(size)
             }
-            parts.append(shortId)
             if terminal.focused {
                 parts.append("(focused)")
             }
