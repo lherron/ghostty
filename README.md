@@ -40,10 +40,14 @@ the API docs in `macos/Sources/Features/API/` for schema details.
 surface is minimal and many tmux-style options are **not** implemented yet.
 
 Supported commands:
-- `list-surfaces`
+- `list-surfaces` (alias: `ls`)
+- `status`
+- `new`
 - `send-keys` (requires `-t <target>`)
 - `set-title` (requires `-t <target>`)
-- `capture-pane` (requires `-t <target>`, visible-only by default)
+- `capture-pane` (requires `-t <target>`, visible-only by default, `--selection` supported)
+
+All commands accept `--json` for machine-readable output.
 
 Examples:
 ```bash
@@ -59,8 +63,17 @@ ghostmux send-keys -t ABCDEF12 "ls -la" --enter
 # Set a terminal title
 ghostmux set-title -t ABCDEF12 "build: ghostty"
 
+# Create a new tab or window
+ghostmux new --tab --cwd /tmp
+
+# Check API availability
+ghostmux status --json
+
 # Capture visible pane contents to stdout
 ghostmux capture-pane -t ABCDEF12
+
+# Capture current selection
+ghostmux capture-pane -t ABCDEF12 --selection
 ```
 
 ## Shell Environment
