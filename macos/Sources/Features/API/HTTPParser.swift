@@ -4,6 +4,7 @@ import Foundation
 struct HTTPRequest {
     let method: String
     let path: String
+    let query: [String: String]
     let headers: [String: String]
     let body: Data?
 
@@ -33,7 +34,8 @@ struct HTTPRequest {
         guard requestLine.count >= 2 else { return nil }
 
         let method = requestLine[0]
-        let path = requestLine[1]
+        let rawPath = requestLine[1]
+        let (path, query) = parsePathAndQuery(rawPath)
 
         // Parse headers
         var headers: [String: String] = [:]
@@ -46,7 +48,23 @@ struct HTTPRequest {
             }
         }
 
-        return HTTPRequest(method: method, path: path, headers: headers, body: bodyData)
+        return HTTPRequest(method: method, path: path, query: query, headers: headers, body: bodyData)
+    }
+
+    private static func parsePathAndQuery(_ rawPath: String) -> (String, [String: String]) {
+        guard let components = URLComponents(string: "http://localhost\(rawPath)") else {
+            return (rawPath, [:])
+        }
+
+        let path = components.path.isEmpty ? rawPath : components.path
+        var query: [String: String] = [:]
+        if let items = components.queryItems {
+            for item in items {
+                query[item.name] = item.value ?? ""
+            }
+        }
+
+        return (path, query)
     }
 }
 

@@ -2,6 +2,8 @@
 
 A file for [guiding coding agents](https://agents.md/).
 
+# PROJECT ID:  The project id for this project is "ghostty" and should be used in wrkq requests.
+
 ## Commands
 
 - **Build:** `zig build`

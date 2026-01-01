@@ -943,7 +943,7 @@ class AppDelegate: NSObject,
         if config.macosAPIServer {
             // Start server if not already running
             if apiServer == nil {
-                let port = config.macosAPIServerPort
+                let port = apiServerPort(for: config)
                 apiServer = APIServer(port: port, surfaceProvider: { [weak self] in
                     self?.getAllSurfaces() ?? []
                 })
@@ -959,6 +959,19 @@ class AppDelegate: NSObject,
             apiServer?.stop()
             apiServer = nil
         }
+    }
+
+    private func apiServerPort(for config: Ghostty.Config) -> UInt16 {
+        var port = config.macosAPIServerPort
+#if DEBUG
+        // Shift port in debug builds to avoid colliding with release instances.
+        if port < UInt16.max {
+            port = port &+ 1
+        } else {
+            port = port &- 1
+        }
+#endif
+        return port
     }
 
     /// Get all surfaces from all terminal controllers

@@ -7,6 +7,50 @@ struct ActionRequest: Codable {
     let action: String
 }
 
+/// Request body for creating a terminal (v2)
+struct CreateTerminalRequest: Codable {
+    let location: String?
+    let command: String?
+    let workingDirectory: String?
+    let env: [String: String]?
+    let parent: String?
+}
+
+/// Request body for sending text (v2)
+struct InputTextRequest: Codable {
+    let text: String
+    let enter: Bool?
+}
+
+/// Request body for key events (v2)
+struct KeyEventRequest: Codable {
+    let key: String
+    let mods: [String]?
+    let action: String?
+}
+
+/// Request body for mouse button events (v2)
+struct MouseButtonRequest: Codable {
+    let button: String
+    let action: String?
+    let mods: [String]?
+}
+
+/// Request body for mouse position events (v2)
+struct MousePositionRequest: Codable {
+    let x: Double
+    let y: Double
+    let mods: [String]?
+}
+
+/// Request body for mouse scroll events (v2)
+struct MouseScrollRequest: Codable {
+    let x: Double?
+    let y: Double?
+    let precision: Bool?
+    let momentum: String?
+}
+
 // MARK: - Response Models
 
 /// Response containing a list of surfaces
@@ -62,6 +106,40 @@ struct ActionResponse: Codable {
         self.action = action
         self.error = error
     }
+}
+
+/// Response containing a list of terminals (v2)
+struct TerminalsResponseV2: Codable {
+    let terminals: [TerminalModelV2]
+}
+
+/// Model representing a terminal (v2)
+struct TerminalModelV2: Codable {
+    let id: String
+    let title: String
+    let workingDirectory: String?
+    let kind: String
+    let focused: Bool
+    let columns: Int?
+    let rows: Int?
+    let cellWidth: Int?
+    let cellHeight: Int?
+}
+
+/// Response for terminal detail lookup (v2)
+struct TerminalDetailsResponse: Codable {
+    let type: String
+    let value: String?
+}
+
+/// Response for quick terminal (v2)
+struct QuickTerminalResponse: Codable {
+    let terminals: [TerminalModelV2]
+}
+
+/// Generic success response (v2)
+struct SuccessResponse: Codable {
+    let success: Bool
 }
 
 /// Generic error response

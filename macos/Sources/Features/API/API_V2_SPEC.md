@@ -46,14 +46,14 @@ curl -X POST http://localhost:19999/api/v2/terminals \
   -H "Content-Type: application/json" \
   -d '{
     "location": "tab",
-    "workingDirectory": "/Users/demo/projects",
+    "working_directory": "/Users/demo/projects",
     "command": "npm run dev"
   }'
 
 # Send text to a terminal
 curl -X POST http://localhost:19999/api/v2/terminals/{id}/input \
   -H "Content-Type: application/json" \
-  -d '{"text": "git status\n"}'
+  -d '{"text": "git status", "enter": true}'
 
 # Get terminal screen contents
 curl http://localhost:19999/api/v2/terminals/{id}/screen
@@ -156,7 +156,7 @@ Returns API version and available endpoints.
 
 #### `GET /api/v2/terminals`
 
-List all terminal surfaces.
+List all terminals.
 
 **Response:**
 ```json
@@ -165,13 +165,13 @@ List all terminal surfaces.
     {
       "id": "550e8400-e29b-41d4-a716-446655440000",
       "title": "zsh",
-      "workingDirectory": "/Users/demo/projects",
+      "working_directory": "/Users/demo/projects",
       "kind": "normal",
       "focused": true,
       "columns": 120,
       "rows": 40,
-      "cellWidth": 10,
-      "cellHeight": 20
+      "cell_width": 10,
+      "cell_height": 20
     }
   ]
 }
@@ -183,13 +183,13 @@ List all terminal surfaces.
 |-------|------|-------------|
 | `id` | string | UUID identifying the terminal |
 | `title` | string | Terminal title (shell or running command) |
-| `workingDirectory` | string? | Current working directory |
+| `working_directory` | string? | Current working directory |
 | `kind` | string | `"normal"` or `"quick"` |
 | `focused` | boolean | Whether this terminal has keyboard focus |
 | `columns` | integer | Terminal width in columns |
 | `rows` | integer | Terminal height in rows |
-| `cellWidth` | integer | Cell width in pixels |
-| `cellHeight` | integer | Cell height in pixels |
+| `cell_width` | integer | Cell width in pixels |
+| `cell_height` | integer | Cell height in pixels |
 
 ---
 
@@ -227,7 +227,7 @@ Create a new terminal window, tab, or split.
 |-------|------|----------|-------------|
 | `location` | string | No | Where to create: `"window"` (default), `"tab"`, `"split:left"`, `"split:right"`, `"split:up"`, `"split:down"` |
 | `command` | string | No | Command to execute after shell initialization |
-| `workingDirectory` | string | No | Initial working directory path |
+| `working_directory` | string | No | Initial working directory path |
 | `env` | object | No | Environment variables as key-value pairs |
 | `parent` | string | No | UUID of parent terminal (for tabs/splits) |
 
@@ -235,7 +235,7 @@ Create a new terminal window, tab, or split.
 ```json
 {
   "location": "tab",
-  "workingDirectory": "/Users/demo/projects/myapp",
+  "working_directory": "/Users/demo/projects/myapp",
   "command": "npm run dev",
   "env": {
     "NODE_ENV": "development",
@@ -249,7 +249,7 @@ Create a new terminal window, tab, or split.
 {
   "location": "split:right",
   "parent": "550e8400-e29b-41d4-a716-446655440000",
-  "workingDirectory": "/Users/demo/projects/myapp"
+  "working_directory": "/Users/demo/projects/myapp"
 }
 ```
 
@@ -258,18 +258,19 @@ Create a new terminal window, tab, or split.
 {
   "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
   "title": "zsh",
-  "workingDirectory": "/Users/demo/projects/myapp",
+  "working_directory": "/Users/demo/projects/myapp",
   "kind": "normal",
   "focused": true,
   "columns": 80,
   "rows": 24,
-  "cellWidth": 10,
-  "cellHeight": 20
+  "cell_width": 10,
+  "cell_height": 20
 }
 ```
 
 **Notes:**
 - The `command` is executed via `initialInput` after shell login scripts run, ensuring PATH and other environment setup is complete
+- The command appends `; exit\n`, so the shell exits when the command completes
 - For splits, if no `parent` is specified, uses the currently focused terminal
 - Returns the newly created terminal object
 
@@ -320,11 +321,13 @@ Send text input to a terminal (like pasting).
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `text` | string | Yes | Text to input |
+| `enter` | boolean | No | Send Enter key after input |
 
 **Example:**
 ```json
 {
-  "text": "echo 'Hello, World!'\n"
+  "text": "echo 'Hello, World!'",
+  "enter": true
 }
 ```
 
@@ -337,8 +340,8 @@ Send text input to a terminal (like pasting).
 
 **Notes:**
 - Text is sent as-if pasted, no escape sequence parsing
-- Include `\n` in the string for Enter key
-- For control characters, use the `/key` endpoint instead
+- Use `enter: true` to send the Enter key after input
+- For control characters or key events, use the `/key` endpoint instead
 
 ---
 
@@ -460,8 +463,8 @@ Send a mouse position/movement event.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `x` | number | Yes | Horizontal position in pixels |
-| `y` | number | Yes | Vertical position in pixels |
+| `x` | number | Yes | Horizontal position |
+| `y` | number | Yes | Vertical position |
 | `mods` | array | No | Modifier keys |
 
 **Example:**
@@ -478,6 +481,9 @@ Send a mouse position/movement event.
   "success": true
 }
 ```
+
+**Notes:**
+- Coordinates are passed through to the Ghostty App Intent used by Shortcuts; use the same coordinate space and units as Shortcuts
 
 ---
 
@@ -511,6 +517,9 @@ Send a mouse scroll event.
 }
 ```
 
+**Notes:**
+- Scroll deltas and momentum values are passed through to the Ghostty App Intent used by Shortcuts
+
 ---
 
 ### Terminal Details
@@ -527,6 +536,9 @@ Get the full screen contents including scrollback.
 }
 ```
 
+**Notes:**
+- This is equivalent to `GET /api/v2/terminals/{id}/details/contents`, but keeps the v1 response shape for compatibility
+
 ---
 
 #### `GET /api/v2/terminals/{id}/details/{type}`
@@ -537,14 +549,14 @@ Get specific details about a terminal.
 
 | Parameter | Description |
 |-----------|-------------|
-| `type` | One of: `title`, `workingDirectory`, `contents`, `selection`, `visible` |
+| `type` | One of: `title`, `working_directory`, `contents`, `selection`, `visible` |
 
 **Detail Types:**
 
 | Type | Description |
 |------|-------------|
 | `title` | Terminal title |
-| `workingDirectory` | Current working directory |
+| `working_directory` | Current working directory |
 | `contents` | Full screen contents including scrollback |
 | `selection` | Currently selected text |
 | `visible` | Only the visible portion of the screen |
@@ -556,6 +568,9 @@ Get specific details about a terminal.
   "value": "selected text here"
 }
 ```
+
+**Notes:**
+- `contents` matches the `/screen` endpoint contents; `visible` returns only the visible viewport
 
 ---
 
@@ -600,13 +615,13 @@ List all available command palette commands.
 {
   "commands": [
     {
-      "key": "new_window",
+      "action_key": "new_window",
       "action": "new_window",
       "title": "New Window",
       "description": "Open a new terminal window"
     },
     {
-      "key": "new_tab",
+      "action_key": "new_tab",
       "action": "new_tab",
       "title": "New Tab",
       "description": "Open a new tab"
@@ -618,6 +633,10 @@ List all available command palette commands.
 ---
 
 ## Data Types
+
+### JSON Field Naming
+
+For compatibility with v1, JSON fields use `snake_case` for multi-word keys (for example: `working_directory`, `cell_width`, `action_key`).
 
 ### Terminal Location
 
@@ -702,7 +721,7 @@ type ScrollMomentum =
 | `invalid_location` | Invalid terminal location value |
 | `invalid_action` | Unknown keybind action |
 | `action_failed` | Action was recognized but failed to execute |
-| `permission_denied` | App intent permission was denied |
+| `permission_denied` | App intent permission was denied (only when permission checks are enabled) |
 
 ---
 
@@ -739,6 +758,8 @@ type ScrollMomentum =
 ### Compatibility
 
 The v1 API will remain available at `/api/v1/` for backward compatibility. New integrations should use v2.
+
+JSON field naming matches v1 (`snake_case`) to keep payloads consistent across versions.
 
 ---
 
@@ -786,6 +807,8 @@ if let command = requestBody.command {
 }
 ```
 
+This means the shell exits when the command completes.
+
 ### TerminalEntity Properties
 
 The `TerminalEntity` in `Entities/TerminalEntity.swift` exposes:
@@ -795,7 +818,7 @@ The `TerminalEntity` in `Entities/TerminalEntity.swift` exposes:
 - `workingDirectory: String?`
 - `kind: Kind` (`.normal` or `.quick`)
 
-Additional properties like `columns`, `rows`, `cellWidth`, `cellHeight` come from the underlying `SurfaceView`.
+Additional properties like `columns`, `rows`, `cell_width`, `cell_height` come from the underlying `SurfaceView`.
 
 ### Router Implementation
 
@@ -824,6 +847,8 @@ All App Intents call `requestIntentPermission()`. The API should either:
 
 Recommendation: Bypass for API since localhost binding already implies trust.
 
+If permission checks are bypassed, `permission_denied` will not be returned. If the same permission system is respected, clients should be prepared to handle it.
+
 ---
 
 ## Examples
@@ -842,7 +867,7 @@ MAIN=$(curl -s -X POST "$API/terminals" \
   -H "Content-Type: application/json" \
   -d "{
     \"location\": \"window\",
-    \"workingDirectory\": \"$PROJECT\",
+    \"working_directory\": \"$PROJECT\",
     \"command\": \"nvim .\"
   }" | jq -r '.id')
 
@@ -854,7 +879,7 @@ curl -s -X POST "$API/terminals" \
   -d "{
     \"location\": \"split:right\",
     \"parent\": \"$MAIN\",
-    \"workingDirectory\": \"$PROJECT\",
+    \"working_directory\": \"$PROJECT\",
     \"command\": \"npm run dev\"
   }"
 
@@ -866,7 +891,7 @@ curl -s -X POST "$API/terminals" \
   -d "{
     \"location\": \"split:down\",
     \"parent\": \"$MAIN\",
-    \"workingDirectory\": \"$PROJECT\"
+    \"working_directory\": \"$PROJECT\"
   }"
 ```
 

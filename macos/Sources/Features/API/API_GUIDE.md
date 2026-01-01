@@ -7,6 +7,8 @@ This guide provides comprehensive documentation for integrating with Ghostty's R
 - [Overview](#overview)
 - [Configuration](#configuration)
 - [API Endpoints](#api-endpoints)
+  - [API v1](#api-v1)
+  - [API v2](#api-v2)
 - [Action Reference](#action-reference)
 - [Common Integration Patterns](#common-integration-patterns)
 - [Error Handling](#error-handling)
@@ -23,7 +25,33 @@ The Ghostty REST API provides HTTP-based control over terminal surfaces. Use it 
 - Send text and keystrokes to specific terminals
 - Build custom command palettes, editor integrations, or automation tools
 
-### Quickstart
+The API is versioned. v1 is legacy; v2 is intent-driven and recommended for new integrations.
+
+### Quickstart (v2)
+
+```bash
+# Check if the v2 API is running
+curl http://localhost:19999/api/v2/
+
+# List all terminals
+curl http://localhost:19999/api/v2/terminals
+
+# Create a new terminal tab
+curl -X POST http://localhost:19999/api/v2/terminals \
+  -H "Content-Type: application/json" \
+  -d '{
+    "location": "tab",
+    "working_directory": "/Users/demo/projects",
+    "command": "npm run dev"
+  }'
+
+# Send text and press Enter
+curl -X POST http://localhost:19999/api/v2/terminals/{id}/input \
+  -H "Content-Type: application/json" \
+  -d '{"text": "git status", "enter": true}'
+```
+
+### Quickstart (v1)
 
 ```bash
 # Check if the API is running
@@ -82,6 +110,11 @@ macos-api-server-port = 8080
 ## API Endpoints
 
 All endpoints return JSON responses. The base URL is `http://localhost:19999`.
+
+- v1 endpoints are under `/api/v1`
+- v2 endpoints are under `/api/v2`
+
+### API v1
 
 ### GET /
 
@@ -300,6 +333,396 @@ curl -X POST http://localhost:19999/api/v1/surfaces/550e8400-e29b-41d4-a716-4466
   "success": false,
   "action": "invalid_action",
   "error": "Action failed or not recognized"
+}
+```
+
+---
+
+### API v2
+
+The v2 API maps to App Intents and uses `snake_case` field names. Base URL: `http://localhost:19999/api/v2`.
+
+#### GET /api/v2/
+
+Returns API version and available endpoints.
+
+**Request:**
+```bash
+curl http://localhost:19999/api/v2/
+```
+
+**Response:**
+```json
+{
+  "version": "2",
+  "endpoints": [
+    "GET /api/v2/terminals",
+    "GET /api/v2/terminals/focused",
+    "GET /api/v2/terminals/{id}",
+    "POST /api/v2/terminals",
+    "DELETE /api/v2/terminals/{id}",
+    "POST /api/v2/terminals/{id}/focus",
+    "POST /api/v2/terminals/{id}/input",
+    "POST /api/v2/terminals/{id}/action",
+    "POST /api/v2/terminals/{id}/key",
+    "POST /api/v2/terminals/{id}/mouse/button",
+    "POST /api/v2/terminals/{id}/mouse/position",
+    "POST /api/v2/terminals/{id}/mouse/scroll",
+    "GET /api/v2/terminals/{id}/screen",
+    "GET /api/v2/terminals/{id}/details/{type}",
+    "POST /api/v2/quick-terminal",
+    "GET /api/v2/commands"
+  ]
+}
+```
+
+---
+
+#### GET /api/v2/terminals
+
+List all terminals.
+
+**Request:**
+```bash
+curl http://localhost:19999/api/v2/terminals
+```
+
+**Response:**
+```json
+{
+  "terminals": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "zsh",
+      "working_directory": "/Users/demo/projects",
+      "kind": "normal",
+      "focused": true,
+      "columns": 120,
+      "rows": 40,
+      "cell_width": 10,
+      "cell_height": 20
+    }
+  ]
+}
+```
+
+**Terminal Object Fields (v2):**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | UUID identifying the terminal |
+| `title` | string | Terminal title (often shell or running command) |
+| `working_directory` | string? | Current working directory |
+| `kind` | string | `"normal"` or `"quick"` |
+| `focused` | boolean | Whether this terminal has keyboard focus |
+| `columns` | integer | Terminal width in columns |
+| `rows` | integer | Terminal height in rows |
+| `cell_width` | integer | Cell width in pixels |
+| `cell_height` | integer | Cell height in pixels |
+
+---
+
+#### GET /api/v2/terminals/focused
+
+Get the currently focused terminal.
+
+**Request:**
+```bash
+curl http://localhost:19999/api/v2/terminals/focused
+```
+
+**Response:** Terminal object (see above)
+
+**Error Response (no focused terminal):**
+```json
+{
+  "error": "no_focused_terminal",
+  "message": "No terminal is currently focused"
+}
+```
+
+---
+
+#### GET /api/v2/terminals/{id}
+
+Get a specific terminal by UUID.
+
+**Request:**
+```bash
+curl http://localhost:19999/api/v2/terminals/550e8400-e29b-41d4-a716-446655440000
+```
+
+**Response:** Terminal object (see above)
+
+---
+
+#### POST /api/v2/terminals
+
+Create a new terminal window, tab, or split.
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `location` | string | No | `"window"` (default), `"tab"`, `"split:left"`, `"split:right"`, `"split:up"`, `"split:down"` |
+| `command` | string | No | Command to execute after shell initialization |
+| `working_directory` | string | No | Initial working directory path |
+| `env` | object | No | Environment variables as key-value pairs |
+| `parent` | string | No | UUID of parent terminal (for tabs/splits) |
+
+**Example:**
+```json
+{
+  "location": "tab",
+  "working_directory": "/Users/demo/projects/myapp",
+  "command": "npm run dev",
+  "env": {
+    "NODE_ENV": "development"
+  }
+}
+```
+
+**Response:** Terminal object (see above)
+
+**Notes:**
+- `command` is converted to `initialInput` with `; exit\n`, so the shell exits when the command completes
+- For splits, if no `parent` is provided, the focused terminal is used
+
+---
+
+#### DELETE /api/v2/terminals/{id}
+
+Close a terminal.
+
+**Query Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `confirm` | boolean | `false` | Whether to show confirmation dialog |
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+---
+
+#### POST /api/v2/terminals/{id}/focus
+
+Focus a specific terminal, bringing its window to the front.
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+---
+
+#### POST /api/v2/terminals/{id}/input
+
+Send text input to a terminal (like pasting).
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `text` | string | Yes | Text to input |
+| `enter` | boolean | No | Send Enter key after input |
+
+**Example:**
+```json
+{
+  "text": "git status",
+  "enter": true
+}
+```
+
+**Response:**
+```json
+{
+  "success": true
+}
+```
+
+**Notes:**
+- Text is sent as-if pasted, no escape sequence parsing
+- For control characters or key events, use the `/key` endpoint instead
+
+---
+
+#### POST /api/v2/terminals/{id}/action
+
+Execute a keybind action on a terminal.
+
+**Request Body:**
+```json
+{
+  "action": "new_split:right"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "action": "new_split:right"
+}
+```
+
+**Notes:**
+- Action strings match the v1 action reference and the keybind actions in your config
+- Use `GET /api/v2/commands` to enumerate available actions
+
+---
+
+#### POST /api/v2/terminals/{id}/key
+
+Send a keyboard event to simulate key presses.
+
+**Request Body:**
+```json
+{
+  "key": "enter",
+  "mods": ["control"],
+  "action": "press"
+}
+```
+
+**Key Names:**
+`a`-`z`, `0`-`9`, `enter`, `escape`, `tab`, `space`, `backspace`, `delete`, `up`, `down`, `left`, `right`, `home`, `end`, `page_up`, `page_down`, `f1`-`f24`
+
+**Modifier Keys:** `shift`, `control`, `option`, `command`
+
+**Key Actions:** `press`, `release`, `repeat`
+
+---
+
+#### POST /api/v2/terminals/{id}/mouse/button
+
+Send a mouse button event.
+
+**Request Body:**
+```json
+{
+  "button": "left",
+  "action": "press",
+  "mods": ["control"]
+}
+```
+
+---
+
+#### POST /api/v2/terminals/{id}/mouse/position
+
+Send a mouse position/movement event.
+
+**Request Body:**
+```json
+{
+  "x": 150.0,
+  "y": 200.0
+}
+```
+
+**Notes:**
+- Coordinates are passed through to the Ghostty App Intent used by Shortcuts; use the same coordinate space and units as Shortcuts
+
+---
+
+#### POST /api/v2/terminals/{id}/mouse/scroll
+
+Send a mouse scroll event.
+
+**Request Body:**
+```json
+{
+  "y": -3.0,
+  "precision": false,
+  "momentum": "changed"
+}
+```
+
+**Momentum Values:** `none`, `began`, `changed`, `ended`, `cancelled`, `stationary`
+
+**Notes:**
+- Scroll deltas and momentum values are passed through to the Ghostty App Intent used by Shortcuts
+
+---
+
+#### GET /api/v2/terminals/{id}/screen
+
+Get the full screen contents including scrollback.
+
+**Response:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "contents": "user@host:~/projects$ ls\\nfile1.txt  file2.txt  src/\\nuser@host:~/projects$ "
+}
+```
+
+---
+
+#### GET /api/v2/terminals/{id}/details/{type}
+
+Get specific details about a terminal.
+
+**Detail Types:** `title`, `working_directory`, `contents`, `selection`, `visible`
+
+**Response:**
+```json
+{
+  "type": "selection",
+  "value": "selected text here"
+}
+```
+
+---
+
+#### POST /api/v2/quick-terminal
+
+Open the quick/dropdown terminal. If already open, does nothing.
+
+**Response:**
+```json
+{
+  "terminals": [
+    {
+      "id": "...",
+      "title": "zsh",
+      "kind": "quick"
+    }
+  ]
+}
+```
+
+---
+
+#### GET /api/v2/commands
+
+List all available command palette commands.
+
+**Query Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `terminal` | string | UUID of terminal to validate context |
+
+**Response:**
+```json
+{
+  "commands": [
+    {
+      "action_key": "new_window",
+      "action": "new_window",
+      "title": "New Window",
+      "description": "Open a new terminal window"
+    }
+  ]
 }
 ```
 
