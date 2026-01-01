@@ -20,9 +20,9 @@ Run `ghostmux <command> --help` for command-specific options.
 
 Examples:
   ghostmux list-surfaces
-  ghostmux send-keys -t workspace "ls -la" --enter
+  ghostmux send-keys -t 1a2b3c4d "ls -la" --enter
   ghostmux send-keys -t 550e8400 C-c
-  ghostmux set-title -t workspace "build: ghostty"
+  ghostmux set-title -t 1a2b3c4d "build: ghostty"
   ghostmux capture-pane -t 550e8400
   ghostmux capturep -t 550e8400 -S 0 -E 5
 """
