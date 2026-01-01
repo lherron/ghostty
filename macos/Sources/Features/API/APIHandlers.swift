@@ -163,6 +163,7 @@ final class APIHandlers {
                 "DELETE /api/v2/terminals/{id}",
                 "POST /api/v2/terminals/{id}/focus",
                 "POST /api/v2/terminals/{id}/input",
+                "POST /api/v2/terminals/{id}/title",
                 "POST /api/v2/terminals/{id}/action",
                 "POST /api/v2/terminals/{id}/key",
                 "POST /api/v2/terminals/{id}/mouse/button",
@@ -353,6 +354,24 @@ final class APIHandlers {
         }
     }
 
+    /// POST /api/v2/terminals/{id}/title - Set terminal title
+    @MainActor
+    func setTerminalTitleV2(uuid: String, body: Data?) -> APIResponse {
+        let request: SetTitleRequest
+        switch decodeV2Request(SetTitleRequest.self, body: body) {
+        case .success(let value): request = value
+        case .failure(let response): return response
+        }
+
+        switch surfaceViewV2(uuid: uuid) {
+        case .success(let surface):
+            surface.setTitle(request.title)
+            return .json(SuccessResponse(success: true))
+        case .failure(let response):
+            return response
+        }
+    }
+
     /// POST /api/v2/terminals/{id}/action - Execute a keybind action
     @MainActor
     func actionTerminalV2(uuid: String, body: Data?) -> APIResponse {
@@ -418,7 +437,13 @@ final class APIHandlers {
             guard let surfaceModel = surface.surfaceModel else {
                 return v2Error("action_failed", "Terminal model unavailable", statusCode: 500)
             }
-            let event = Ghostty.Input.KeyEvent(key: key, action: action, mods: mods)
+            let event = Ghostty.Input.KeyEvent(
+                key: key,
+                action: action,
+                text: request.text,
+                mods: mods,
+                unshiftedCodepoint: request.unshiftedCodepoint ?? 0
+            )
             surfaceModel.sendKeyEvent(event)
             return .json(SuccessResponse(success: true))
         case .failure(let response):

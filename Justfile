@@ -8,6 +8,7 @@ set dotenv-filename := ".env.local"
 app_name := "ScriptableGhostty"
 bundle_id := "com.lherron.scriptableghostty"
 install_dir := env_var("HOME") / "Applications"
+local_bin := env_var("HOME") / ".local" / "bin"
 signing_identity := env_var_or_default("signing_identity", "-")  # Ad-hoc signing by default
 
 # Default recipe - show available commands
@@ -47,16 +48,46 @@ build-swift:
 install: build
     @mkdir -p "{{ install_dir }}"
     rsync -a --delete "macos/build/Release/{{ app_name }}.app/" "{{ install_dir }}/{{ app_name }}.app/"
+    @just bundle-ghostmux
     @just _resign
+    @just install-ghostmux
     @echo "Installed to {{ install_dir }}/{{ app_name }}.app"
+
+# Build ghostmux CLI (UDS-only)
+ghostmux:
+    @mkdir -p "macos/build/ghostmux"
+    swiftc -O -o "macos/build/ghostmux/ghostmux" \
+        macos/Tools/ghostmux/*.swift \
+        macos/Tools/ghostmux/Commands/*.swift
+
+# Smoke test ghostmux CLI (skips if Ghostty socket is missing)
+ghostmux-test: ghostmux
+    @bash macos/Tools/ghostmux/tests/ghostmux_smoke.sh
+
+# Install ghostmux CLI to ~/.local/bin and bundle into app
+install-ghostmux: ghostmux
+    @mkdir -p "{{ local_bin }}"
+    cp "macos/build/ghostmux/ghostmux" "{{ local_bin }}/ghostmux"
+    chmod +x "{{ local_bin }}/ghostmux"
+    @just bundle-ghostmux
+    @echo "Installed ghostmux to {{ local_bin }}/ghostmux"
+
+# Bundle ghostmux inside the app
+bundle-ghostmux: ghostmux
+    @mkdir -p "{{ install_dir }}/{{ app_name }}.app/Contents/Resources"
+    cp "macos/build/ghostmux/ghostmux" "{{ install_dir }}/{{ app_name }}.app/Contents/Resources/ghostmux"
+    chmod +x "{{ install_dir }}/{{ app_name }}.app/Contents/Resources/ghostmux"
+    @echo "Bundled ghostmux at {{ install_dir }}/{{ app_name }}.app/Contents/Resources/ghostmux"
 
 # Install with post-build icon replacement and cache clear
 install-with-replace-icon: build
     @mkdir -p "{{ install_dir }}"
     rsync -a --delete "macos/build/Release/{{ app_name }}.app/" "{{ install_dir }}/{{ app_name }}.app/"
     @just _replace-icon
+    @just bundle-ghostmux
     @just _resign
     @just _clear-icon-cache
+    @just install-ghostmux
     @echo "Installed to {{ install_dir }}/{{ app_name }}.app"
 
 # Replace the app icon (generate icns from ScriptableGhostty png)
@@ -173,6 +204,8 @@ _resign:
 
 # Build ScriptableGhostty macOS app (Debug) and run it
 debug:
+    -pkill -f "{{ app_name }}.app"
+    @sleep 1
     zig build
     @just _sync-icon-assets
     cd macos && xcodebuild \

@@ -34,6 +34,37 @@ Scriptable Ghostty is a fork of [Ghostty](https://github.com/ghostty-org/ghostty
 UDS uses a 4-byte big-endian length prefix followed by a JSON payload. See
 the API docs in `macos/Sources/Features/API/` for schema details.
 
+## ghostmux (UDS-only CLI)
+
+`ghostmux` is a tiny, intentionally limited CLI that talks to the UDS API. The command
+surface is minimal right now: only a handful of commands are supported and many
+tmux-style options are **not** implemented yet.
+
+Supported commands:
+- `list-surfaces` (alias: `list-sessions`)
+- `send-keys` (requires `-t <target>`)
+- `set-title` (requires `-t <target>`)
+- `capture-pane` (requires `-t <target>`, visible-only by default)
+
+Note: `set-title` uses a direct API endpoint when available. If the app
+doesn't support it yet, `ghostmux` falls back to sending an OSC sequence
+via shell input (which requires a shell prompt and will appear in the buffer).
+
+Examples:
+```bash
+# List terminals
+ghostmux list-surfaces
+
+# Send keys to a terminal
+ghostmux send-keys -t workspace "ls -la" --enter
+
+# Set a terminal title
+ghostmux set-title -t workspace "build: ghostty"
+
+# Capture visible pane contents to stdout
+ghostmux capture-pane -t 550e8400
+```
+
 ## Shell Environment
 
 Scriptable Ghostty injects `GHOSTTY_SURFACE_UUID` into each shell session, containing the UUID of the terminal surface. This allows scripts to identify which surface they're running in and target API calls accordingly.

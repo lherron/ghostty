@@ -22,11 +22,18 @@ struct InputTextRequest: Codable {
     let enter: Bool?
 }
 
+/// Request body for setting terminal title (v2)
+struct SetTitleRequest: Codable {
+    let title: String
+}
+
 /// Request body for key events (v2)
 struct KeyEventRequest: Codable {
     let key: String
     let mods: [String]?
     let action: String?
+    let text: String?
+    let unshiftedCodepoint: UInt32?
 }
 
 /// Request body for mouse button events (v2)
