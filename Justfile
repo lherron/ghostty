@@ -1,10 +1,14 @@
 # ScriptableGhostty Build Configuration
 # Custom build overrides for forked Ghostty
 
+# Load local overrides if present (e.g., signing_identity)
+set dotenv-load := true
+set dotenv-filename := ".env.local"
+
 app_name := "ScriptableGhostty"
 bundle_id := "com.lherron.scriptableghostty"
 install_dir := env_var("HOME") / "Applications"
-signing_identity := "Apple Development: Lance Herron (85G598CUAZ)"
+signing_identity := env_var_or_default("signing_identity", "-")  # Ad-hoc signing by default
 
 # Default recipe - show available commands
 default:
@@ -212,3 +216,4 @@ info:
     @echo "App Name:   {{ app_name }}"
     @echo "Bundle ID:  {{ bundle_id }}"
     @echo "Install To: {{ install_dir }}/{{ app_name }}.app"
+    @echo "Signing:    {{ signing_identity }}"

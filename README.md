@@ -39,6 +39,12 @@ just info     # Show build configuration
 
 Requires [just](https://github.com/casey/just), Xcode, and Zig. See upstream [HACKING.md](HACKING.md) for full build prerequisites.
 
+**Note:** The Justfile uses ad-hoc signing by default. For better macOS integration (saved permissions, Accessibility access, etc.), create a `.env.local` file with your signing identity:
+
+```bash
+echo 'signing_identity="Apple Development: Your Name (TEAMID)"' > .env.local
+```
+
 ## Upstream
 
 This fork tracks upstream Ghostty. For documentation on terminal features, configuration, and general usage, see the [Ghostty documentation](https://ghostty.org/docs).
