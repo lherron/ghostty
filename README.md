@@ -15,7 +15,7 @@
 
 ## About
 
-Scriptable Ghostty is a fork of [Ghostty](https://github.com/ghostty-org/ghostty) that exposes the Ghostty command palette and app intents via API, exposed over HTTP and Unix sockets.
+Scriptable Ghostty is a fork of [Ghostty](https://github.com/ghostty-org/ghostty) that exposes the Ghostty command palette and app intents via API, available over HTTP and Unix sockets.
 
 **macOS only.** The scripting API is implemented in Swift via the [Features/API](macos/Sources/Features/API/) module. See the [API Guide](macos/Sources/Features/API/API_GUIDE.md) for details.
 
